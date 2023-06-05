@@ -11,11 +11,11 @@ package object simulation {
   implicit val BlockEq: Eq[Block] = (x: Block, y: Block) => x == y
 
   case class UpdateFromPeer(
-    peer:       NodeId,
-    peerBlocks: Option[ListSet[Block]] = None,
-    hotPeers:   Map[NodeId, RemoteNodeConnection] = Map.empty,
-    warmPeers:  Map[NodeId, RemoteNodeConnection] = Map.empty,
-    coldPeers:  Map[NodeId, NetworkNode] = Map.empty
+                             peer:       NodeId,
+                             peerBlocks: Option[ListSet[Block]] = None,
+                             hotPeers:   Map[NodeId, RemoteHotNodeConnection] = Map.empty,
+                             warmPeers:  Map[NodeId, RemoteHotNodeConnection] = Map.empty,
+                             coldPeers:  Map[NodeId, RemoteColdConnection] = Map.empty
   )
 
   case class UpdateSummary(
@@ -40,22 +40,13 @@ package object simulation {
     object NoOp extends NodeUpdate
   }
 
-  case class RemoteNodeConnection(
-    node:                  NetworkNode,
-    blockReputation:       Double,
-    performanceReputation: Double,
-    newReputation:         Double
-  ) {
-    val reputation: Double ={
-      val mean = (blockReputation * performanceReputation * newReputation) / 3
-      val max = Math.max(Math.max(blockReputation, performanceReputation), newReputation)
-      (2 * max + mean) / 3
-    }
-  }
+
 
 
   implicit val blockOrdering: Ordering[ListSet[Block]] =
-    Ordering.by[ListSet[Block], Long](_.size).orElseBy(_.lastOption.map(_.blockValue.toLong).getOrElse(0L))
+    Ordering.by[ListSet[Block], Long](_.size)
+      .orElseBy(_.lastOption.map(- _.slot))
+      .orElseBy(_.lastOption.map(_.blockValue.toLong).getOrElse(0L))
 
   def calculateDistance(node1: NetworkNode, node2: NetworkNode): Long = {
     val x = math.abs(node1.state.x - node2.state.x)
@@ -90,11 +81,13 @@ package object simulation {
     object Further extends DistanceQuality {
       def toReputation(config: Config): Double = config.reputationDistanceFurther
     }
+
     object VeryFurther extends DistanceQuality {
       def toReputation(config: Config): Double = config.reputationDistanceVeryFurther
     }
   }
 
-  def getPseudoBlockId(blocks: ListSet[Block]): String = s"${blocks.size}:${blocks.lastOption.getOrElse("")}"
-
+  val emptyBlockchain: String = ""
+  def getLastPseudoBlockId(blocks: ListSet[Block]): String =
+    blocks.lastOption.map(lastBlock => s"${blocks.size}:${lastBlock}").getOrElse(emptyBlockchain)
 }

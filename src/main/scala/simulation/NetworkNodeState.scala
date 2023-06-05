@@ -10,11 +10,11 @@ case class NetworkNodeState(
   forger:          Boolean,
   enabled:         Boolean = true,
   blocks:          ListSet[Block] = ListSet.empty,
-  hotConnections:  Map[NodeId, RemoteNodeConnection] = Map.empty,
-  warmConnections: Map[NodeId, RemoteNodeConnection] = Map.empty,
-  coldConnections: Map[NodeId, NetworkNode] = Map.empty,
+  hotConnections:  Map[NodeId, RemoteHotNodeConnection] = Map.empty,
+  warmConnections: Map[NodeId, RemoteHotNodeConnection] = Map.empty,
+  coldConnections: Map[NodeId, RemoteColdConnection] = Map.empty,
   distanceDelta:   Double = 0,
-  lastForgedBlock: Option[(SlotId,Block)] = None
+  lastForgedBlock: Option[(SlotId, Block)] = None
 )
 
 object NetworkNodeState {
@@ -49,7 +49,8 @@ object NetworkNodeState {
       removedHotPeer.map { case (id, conn) => (id, conn.node) } ++
       updatedWarmPeer.map { case (id, conn) => (id, conn.node) } ++
       removedWarmPeer.map { case (id, conn) => (id, conn.node) } ++
-      updatedColdPeer ++ removedColdPeer
+      updatedColdPeer.map { case (id, conn) => (id, conn.node) } ++
+      removedColdPeer.map { case (id, conn) => (id, conn.node) }
 
     val addedBlocks = newBlocks.map(_.dropWhile(oldState.blocks.contains)).getOrElse(ListSet.empty)
     val removedBlocks = newBlocks.map(nb => oldState.blocks.dropWhile(nb.contains)).getOrElse(ListSet.empty)
@@ -68,3 +69,26 @@ object NetworkNodeState {
     )
   }
 }
+
+case class RemoteHotNodeConnection(
+  node:                  NetworkNode,
+  blockReputation:       Double,
+  performanceReputation: Double,
+  newReputation:         Double
+) {
+
+  val reputation: Double = {
+    val mean = (blockReputation + performanceReputation + newReputation) / 3
+
+    val max = Math.max(Math.max(blockReputation, performanceReputation), newReputation)
+    val weighted = (2 * max + mean) / 3
+
+    val meanWithoutNew = (blockReputation + performanceReputation) / 2
+    meanWithoutNew
+  }
+}
+
+case class RemoteColdConnection(
+  node:       NetworkNode,
+  reputation: Double
+)

@@ -11,6 +11,9 @@ libraryDependencies += "org.graphstream" % "gs-core" % "2.0"
 libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % "3.0.0"
 libraryDependencies += "org.graphstream" % "gs-ui-swing" % "2.0"
 libraryDependencies += "org.graphstream" % "gs-ui-javafx" % "2.0"
+// https://mvnrepository.com/artifact/org.apache.commons/commons-math3
+libraryDependencies += "org.apache.commons" % "commons-math3" % "3.6.1"
+
 
 
 

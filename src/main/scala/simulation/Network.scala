@@ -57,7 +57,7 @@ class Network {
     }
 
   def addColdPeerForNode(forNode: NodeId, knownNodes: Seq[NodeId]): NodeUpdate = {
-    val toAdd = knownNodes.map(id => (id, nodes(id))).toMap
+    val toAdd = knownNodes.map(id => (id, RemoteColdConnection(nodes(id), 0))).toMap
 
     val node = nodes(forNode)
     val oldState = node.state.copy()
