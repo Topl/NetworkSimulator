@@ -11,7 +11,7 @@ case class NetworkNodeState(
   enabled:         Boolean = true,
   blocks:          ListSet[Block] = ListSet.empty,
   hotConnections:  Map[NodeId, RemoteHotNodeConnection] = Map.empty,
-  warmConnections: Map[NodeId, RemoteHotNodeConnection] = Map.empty,
+  warmConnections: Map[NodeId, RemoteWarmConnection] = Map.empty,
   coldConnections: Map[NodeId, RemoteColdConnection] = Map.empty,
   distanceDelta:   Double = 0,
   lastForgedBlock: Option[(SlotId, Block)] = None
@@ -92,3 +92,5 @@ case class RemoteColdConnection(
   node:       NetworkNode,
   reputation: Double
 )
+
+case class RemoteWarmConnection(node: NetworkNode, performance: Double)

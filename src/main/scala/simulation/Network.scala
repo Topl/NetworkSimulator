@@ -15,16 +15,22 @@ class Network {
   private val blockIdToMetaInfo: mutable.Map[Block, BlockMetaInfo] = mutable.Map.empty.withDefaultValue(BlockMetaInfo())
   var lastSlotId: SlotId = 0
 
-  def getPropagation95Mean: (Long, Double) = {
+  def getPropagation95Mean(skipSlotsUpTo: Long): (Long, Double) = {
     val propagations =
-      blockIdToMetaInfo.filter(_._2.propagation95Delta.isDefined).map(_._2.propagation95Delta.get.toDouble).toSeq
+      blockIdToMetaInfo
+        .filter(_._1.slot > skipSlotsUpTo)
+        .filter(_._2.propagation95Delta.isDefined)
+        .map(_._2.propagation95Delta.get.toDouble).toSeq
 
     (propagations.size, propagations.sum / propagations.size)
   }
 
-  def getPropagation75Mean: (Long, Double) = {
+  def getPropagation75Mean(skipSlotsUpTo: Long): (Long, Double) = {
     val propagations =
-      blockIdToMetaInfo.filter(_._2.propagation75Delta.isDefined).map(_._2.propagation75Delta.get.toDouble).toSeq
+      blockIdToMetaInfo
+        .filter(_._1.slot > skipSlotsUpTo)
+        .filter(_._2.propagation75Delta.isDefined)
+        .map(_._2.propagation75Delta.get.toDouble).toSeq
 
     (propagations.size, propagations.sum / propagations.size)
   }

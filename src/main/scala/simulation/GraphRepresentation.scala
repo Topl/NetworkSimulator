@@ -64,7 +64,7 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
     slotsPerBlockNode.setAttribute("ui.style", defaultUiStyle)
   }
 
-  def updateStatistic(network: Network): Unit = {
+  def updateStatistic(network: Network, networkConfig: NetworkConfig): Unit = {
     graph.getNode(currentSlotId).setAttribute("ui.label", s"Current slot id: ${network.lastSlotId}")
 
     val totalNodesCount: Double = network.nodes.count(_._2.state.enabled)
@@ -80,19 +80,19 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
         f"Opened hot connections per node: ${network.nodes.map(_._2.state.hotConnections.size).sum / totalNodesCount}%.2f"
       )
 
-    val (propagation95size, propagation95mean) = network.getPropagation95Mean
+    val (propagation95size, propagation95mean) = network.getPropagation95Mean(networkConfig.statisticSkipBlocksWithSlotLess)
     graph
       .getNode(blockPropagation95NodeId)
       .setAttribute(
         "ui.label",
-        f"Propagation mean time (95%%) for block: ${propagation95mean}%.2f, total blocks: $propagation95size"
+        f"Propagation mean time (95%%) for block with slot > ${networkConfig.statisticSkipBlocksWithSlotLess}: ${propagation95mean}%.2f, total blocks: $propagation95size"
       )
-    val (propagation75size, propagation75mean) = network.getPropagation75Mean
+    val (propagation75size, propagation75mean) = network.getPropagation75Mean(networkConfig.statisticSkipBlocksWithSlotLess)
     graph
       .getNode(blockPropagation75NodeId)
       .setAttribute(
         "ui.label",
-        f"Propagation mean time (75%%) for block: ${propagation75mean}%.2f, total blocks: $propagation75size"
+        f"Propagation mean time (75%%) for block with slot > ${networkConfig.statisticSkipBlocksWithSlotLess}: ${propagation75mean}%.2f, total blocks: $propagation75size"
       )
 
     val usedSlots = network.nodes(0).state.blocks.map(_.slot)
