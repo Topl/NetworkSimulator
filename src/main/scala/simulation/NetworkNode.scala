@@ -16,8 +16,8 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
         .map(_._2.reputation)
         .toIndexedSeq
         .sorted
-        .takeRight(config.hotConnectionsMinimum)
-        .sum / config.hotConnectionsMinimum.toDouble
+        .takeRight(config.nodeReputationHotConnectionsToTake)
+        .sum / config.nodeReputationHotConnectionsToTake.toDouble
     } else { 0 }
 
   var blockUpdates: mutable.Map[String, Int] = mutable.HashMap[String, Int]().withDefaultValue(0)
@@ -194,7 +194,7 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
 
     val preNewHot = (state.hotConnections -- toRemove) ++ byBlocks ++ byPerformance ++ byNewest
     val addHot = {
-      val toAddCount = config.hotConnectionsMinimum - preNewHot.size
+      val toAddCount = config.nodeReputationHotConnectionsToTake - preNewHot.size
       (state.hotConnections -- preNewHot.keySet).toIndexedSeq.sortBy(_._2.reputation).takeRight(toAddCount).toMap
     }
     val newHot = preNewHot// ++ addHot

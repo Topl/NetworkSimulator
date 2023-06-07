@@ -5,23 +5,23 @@ import org.graphstream.graph.implementations.SingleGraph
 import scala.util.Random
 
 case class Config(
-  seed:                             Long = 0,
-  maxX:                             Int = 1000,
-  maxY:                             Int = 1000,
-  distancePerSlot:                  Int = 200,
-  fetchingHostSlotDelay:            Int = 1,
-  warmConnectionsMaximum:           Int = 10,
-  hotConnectionsMinimum:            Int = 5,
-  hotConnectionsMinimumBlock:       Int = 2,
-  hotConnectionMinimumPerformance:  Int = 2,
-  coldConnectionsMinimum:           Int = 20,
-  reputationMaximumNewConnection:   Int = 10,
-  reputationForNewConnection:       Double = 1,
-  reputationNewDecoyPercentPerSlot: Double = 0.1,
-  reputation1BlockReputation:       Double = 1,
-  reputation2BlockReputation:       Double = 0.8,
-  reputation3BlockReputation:       Double = 0.6,
-  reputation4BlockReputation:       Double = 0.4,
+  seed:                               Long = 0,
+  maxX:                               Int = 1000,
+  maxY:                               Int = 1000,
+  distancePerSlot:                    Int = 200,
+  fetchingHostSlotDelay:              Int = 1,
+  warmConnectionsMaximum:             Int = 10,
+  nodeReputationHotConnectionsToTake: Int = 5,
+  hotConnectionsMinimumBlock:         Int = 2,
+  hotConnectionMinimumPerformance:    Int = 2,
+  coldConnectionsMinimum:             Int = 20,
+  reputationMaximumNewConnection:     Int = 10,
+  reputationForNewConnection:         Double = 1,
+  reputationNewDecoyPercentPerSlot:   Double = 0.1,
+  reputation1BlockReputation:         Double = 1,
+  reputation2BlockReputation:         Double = 0.8,
+  reputation3BlockReputation:         Double = 0.6,
+  reputation4BlockReputation:         Double = 0.4,
   // reputation for ideal block transmitter shall no go lower than reputation2BlockReputation,
   // thus we shall take into consideration forgingSlotsPerBlock, i.e.
   // reputation1BlockReputation * (1-reputationNewDecoyPercentPerSlot) * forgingSlotsPerBlock > reputation2BlockReputation
@@ -30,9 +30,9 @@ case class Config(
   distanceInSlotNormal:               Int = 3,
   distanceInSlotFurther:              Int = 5,
   reputationDistanceClose:            Double = 1.0,
-  reputationDistanceNormal:           Double = 0.75, //0.75
-  reputationDistanceFurther:          Double = 0.5, //0.5
-  reputationDistanceVeryFurther:      Double = 0.25, //0.25
+  reputationDistanceNormal:           Double = 0.75, // 0.75
+  reputationDistanceFurther:          Double = 0.5, // 0.5
+  reputationDistanceVeryFurther:      Double = 0.25, // 0.25
   closeHotConnectionThreshold:        Double = 0.66,
   forgingInitialPercent:              Int = 5,
   forgingGapWindowInSlots:            Int = 5,
@@ -48,7 +48,7 @@ case class Config(
     reputationForNewConnection * decoy
   }
 
-  val coldConnectionFetchEveryNSlots:   Int = Math.round(forgingSlotsPerBlock * 4).toInt
+  val coldConnectionFetchEveryNSlots: Int = Math.round(forgingSlotsPerBlock * 4).toInt
 
 }
 
@@ -59,7 +59,7 @@ case class NetworkConfig(
   maximumNodes:                    Int = 500,
   createForgerEveryNSlots:         Int = 20,
   statisticSkipBlocksWithSlotLess: Long = 500,
-  showGraph:                       Boolean = true
+  showGraph:                       Boolean = false
 ) {
   val maxDistanceChanger: Double = config.maxDistance / 5
 
@@ -72,7 +72,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
-    val random = new Random(42)
+    val random = new Random(686578)
     val config = Config()
     val networkConfig = NetworkConfig(config, random)
 
@@ -111,7 +111,7 @@ object Main {
         } else Seq(NodeUpdate.NoOp)
       if (networkConfig.showGraph) view.updateGraph(newNode)
       view.updateStatistic(network, networkConfig)
-      Thread.sleep(100)
+      //Thread.sleep(50)
     }
 
   }
