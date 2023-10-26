@@ -44,10 +44,11 @@ case class Config(
 
   minimumRequiredReputation:            Double = 0.66,
 
-  warmHostsUpdateEveryNBlock:           Double = 4.0,
+  warmHostsUpdateEveryNBlock:           Double = 2.0,
 
-  remotePeerNoveltyInExpectedBlocks:    Double = 2.0,
+  remotePeerNoveltyInExpectedBlocks:    Double = 4.0,
 
+  closeTimeoutFirstDelayInSlots: Int = 2,
   ///
   // reputation for ideal block transmitter shall no go lower than reputation2BlockReputation,
   // thus we shall take into consideration forgingSlotsPerBlock, i.e.

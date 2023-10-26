@@ -56,6 +56,10 @@ package object simulation {
     def toReputation(config: Config): Double
   }
 
+  def calculatePerfReputation(distance: Long, config: Config): Double = {
+    1 - (distance / config.maxDistance)
+  }
+
   object DistanceQuality {
 
     def apply(distance: Double, config: Config): DistanceQuality = {

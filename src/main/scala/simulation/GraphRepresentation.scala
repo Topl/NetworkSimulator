@@ -9,6 +9,7 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
   private val totalNodes = "TotalNodes"
   private val totalForgers = "TotalForgers"
   private val meanHotConnections = "MeanHotConnections"
+  private val meanWarmConnections = "MeanWarmConnections"
   private val blockPropagation95NodeId = "BlockPropagation95"
   private val blockPropagation75NodeId = "BlockPropagation75"
   private val slotsPerBlock = "SlotsPerBlock"
@@ -52,20 +53,24 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
     meanHotConnectionsNode.setAttribute("xy", xShift, config.maxY + 3 * yShift)
     meanHotConnectionsNode.setAttribute("ui.style", defaultUiStyle)
 
+    val meanWarmConnectionsNode = graph.addNode(meanWarmConnections)
+    meanWarmConnectionsNode.setAttribute("xy", xShift, config.maxY + 4 * yShift)
+    meanWarmConnectionsNode.setAttribute("ui.style", defaultUiStyle)
+
     val propagation95Node = graph.addNode(blockPropagation95NodeId)
-    propagation95Node.setAttribute("xy", xShift, config.maxY + 4 * yShift)
+    propagation95Node.setAttribute("xy", xShift, config.maxY + 5 * yShift)
     propagation95Node.setAttribute("ui.style", defaultUiStyle)
 
     val propagation75Node = graph.addNode(blockPropagation75NodeId)
-    propagation75Node.setAttribute("xy", xShift, config.maxY + 5 * yShift)
+    propagation75Node.setAttribute("xy", xShift, config.maxY + 6 * yShift)
     propagation75Node.setAttribute("ui.style", defaultUiStyle)
 
     val slotsPerBlockNode = graph.addNode(slotsPerBlock)
-    slotsPerBlockNode.setAttribute("xy", xShift, config.maxY + 6 * yShift)
+    slotsPerBlockNode.setAttribute("xy", xShift, config.maxY + 7 * yShift)
     slotsPerBlockNode.setAttribute("ui.style", defaultUiStyle)
 
     val bestBlockSourceProbabilityNode = graph.addNode(bestBlockSourceProbability)
-    bestBlockSourceProbabilityNode.setAttribute("xy", xShift, config.maxY + 7 * yShift)
+    bestBlockSourceProbabilityNode.setAttribute("xy", xShift, config.maxY + 8 * yShift)
     bestBlockSourceProbabilityNode.setAttribute("ui.style", defaultUiStyle)
   }
 
@@ -78,11 +83,19 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
     graph
       .getNode(totalForgers)
       .setAttribute("ui.label", s"Total forgers: ${network.nodes.count(n => n._2.state.enabled && n._2.forger)}")
+
     graph
       .getNode(meanHotConnections)
       .setAttribute(
         "ui.label",
         f"Opened hot connections per node: ${network.nodes.map(_._2.state.hotConnections.size).sum / totalNodesCount}%.2f"
+      )
+
+    graph
+      .getNode(meanWarmConnections)
+      .setAttribute(
+        "ui.label",
+        f"Opened warm connections per node: ${network.nodes.map(_._2.state.warmConnections.size).sum / totalNodesCount}%.2f"
       )
 
     val (propagation95size, propagation95mean) = network.getPropagation95Mean(networkConfig.statisticSkipBlocksWithSlotLess)
@@ -114,11 +127,12 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
         f"Block expectation time mean: ${stats.getMean}%.2f, with standard deviation ${stats.getStandardDeviation}%.2f"
       )
 
+    val blockSources = network.getBestBlockSourcePercent(networkConfig).sorted.takeRight(13).map(v => f"$v%.2f").mkString(",")
     graph
       .getNode(bestBlockSourceProbability)
       .setAttribute(
         "ui.label",
-        f"Max percent of blocks from the same source: ${network.getBestBlockSourcePercent(networkConfig)}%.2f"
+        f"Source: $blockSources"
       )
   }
 
@@ -155,7 +169,7 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
         val red = lastBlock.blockValue.toByte
         val green = lastBlock.blockValue.toByte
         val blue = lastBlock.blockValue.toByte
-        val nodeLabel = /*f"${node.totalReputation(config)}%.2f" +*/ f"[${node.distanceDelta}%.1f]" + s"[${block.size}]$text"
+        val nodeLabel = f"${node.totalReputation(config)}%.2f" + f"[${node.distanceDelta}%.1f]" + s"[${block.size}]$text"
         graph
           .getNode(thisNodeId.toString)
           .setAttribute("ui.style", s"text-alignment: above; text-size: ${nodeTextSize};")

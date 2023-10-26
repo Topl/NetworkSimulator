@@ -136,14 +136,15 @@ class Network {
     }
   }
 
-  def getBestBlockSourcePercent(config: NetworkConfig): Double = {
+  def getBestBlockSourcePercent(config: NetworkConfig): Seq[Double] = {
     val blocks = nodes.filter(d => d._2.state.enabled && d._1 != 0).head._2.state.blocks
     if (blocks.lastOption.map(_.slot).getOrElse(0L) < config.statisticSkipBlocksWithSlotLess) {
-      0.0
+      Seq(0.0)
     } else {
       val actualBlocks = blocks.dropWhile(_.slot < config.statisticSkipBlocksWithSlotLess)
-      val bestSourceSize = actualBlocks.groupBy(_.source).map { case (id, blocks) => blocks.size }.maxOption.getOrElse(0)
-      bestSourceSize.toDouble / actualBlocks.size
+      val bestSourceSize =
+        actualBlocks.groupBy(_.source).map { case (id, blocks) => blocks.size.toDouble / actualBlocks.size }
+      bestSourceSize.toSeq
     }
   }
 }

@@ -78,4 +78,6 @@ case class RemoteConnection(
   performanceReputation: Double,
   newReputation:         Double,
   lastClosedTimestamps:  Seq[Long] = Seq.empty
-) {}
+) {
+  val reputation: Double = (blockReputation + performanceReputation) / 2
+}
