@@ -12,6 +12,7 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
   private val blockPropagation95NodeId = "BlockPropagation95"
   private val blockPropagation75NodeId = "BlockPropagation75"
   private val slotsPerBlock = "SlotsPerBlock"
+  private val bestBlockSourceProbability = "BestBlockSourceProbability" //get max percent of blocks from the same source
 
   def initDraw(): Unit = {
     graph.addNode("A")
@@ -62,6 +63,10 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
     val slotsPerBlockNode = graph.addNode(slotsPerBlock)
     slotsPerBlockNode.setAttribute("xy", xShift, config.maxY + 6 * yShift)
     slotsPerBlockNode.setAttribute("ui.style", defaultUiStyle)
+
+    val bestBlockSourceProbabilityNode = graph.addNode(bestBlockSourceProbability)
+    bestBlockSourceProbabilityNode.setAttribute("xy", xShift, config.maxY + 7 * yShift)
+    bestBlockSourceProbabilityNode.setAttribute("ui.style", defaultUiStyle)
   }
 
   def updateStatistic(network: Network, networkConfig: NetworkConfig): Unit = {
@@ -108,6 +113,13 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
         "ui.label",
         f"Block expectation time mean: ${stats.getMean}%.2f, with standard deviation ${stats.getStandardDeviation}%.2f"
       )
+
+    graph
+      .getNode(bestBlockSourceProbability)
+      .setAttribute(
+        "ui.label",
+        f"Max percent of blocks from the same source: ${network.getBestBlockSourcePercent(networkConfig)}%.2f"
+      )
   }
 
   def updateGraph(updates: Seq[NodeUpdate]): Unit =
@@ -143,7 +155,7 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
         val red = lastBlock.blockValue.toByte
         val green = lastBlock.blockValue.toByte
         val blue = lastBlock.blockValue.toByte
-        val nodeLabel = f"${node.totalReputation(config)}%.2f" + f"[${node.distanceDelta}%.1f]" + s"[${block.size}]$text"
+        val nodeLabel = /*f"${node.totalReputation(config)}%.2f" +*/ f"[${node.distanceDelta}%.1f]" + s"[${block.size}]$text"
         graph
           .getNode(thisNodeId.toString)
           .setAttribute("ui.style", s"text-alignment: above; text-size: ${nodeTextSize};")
@@ -186,10 +198,10 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
     val color = distanceToColor(DistanceQuality(distance, config))
     val thisToRemotePeerType: KnownPeer = KnownPeer.forNode(thisNode, remoteNode)
     val thisToRemotePeerReputation =
-      thisNode.state.hotConnections.get(remoteNode.id).map(c => f"${c.reputation}%.2f").getOrElse("")
+      thisNode.state.hotConnections.get(remoteNode.id).map(c => f"${c.blockReputation}%.2f").getOrElse("")
     val remoteToThisPeerType: KnownPeer = KnownPeer.forNode(remoteNode, thisNode)
     val remoteToThisPeerReputation =
-      remoteNode.state.hotConnections.get(thisNodeId).map(c => f"${c.reputation}%.2f").getOrElse("")
+      remoteNode.state.hotConnections.get(thisNodeId).map(c => f"${c.blockReputation}%.2f").getOrElse("")
 
     val (edgeId, label) =
       if (nodeCompare.lt(thisNode, remoteNode)) {

@@ -1,4 +1,3 @@
-import cats.data.Chain
 import cats.kernel.Eq
 
 import scala.collection.immutable.ListSet
@@ -7,25 +6,23 @@ package object simulation {
   type NodeId = Long
   type SlotId = Long
 
-  case class Block(slot: Long, height: Long, blockValue: Char)
+  case class Block(slot: Long, height: Long, blockValue: Char, source: NodeId)
   implicit val BlockEq: Eq[Block] = (x: Block, y: Block) => x == y
 
   case class UpdateFromPeer(
-                             peer:       NodeId,
-                             peerBlocks: Option[ListSet[Block]] = None,
-                             hotPeers:   Map[NodeId, RemoteHotNodeConnection] = Map.empty,
-                             warmPeers:  Map[NodeId, RemoteHotNodeConnection] = Map.empty,
-                             coldPeers:  Map[NodeId, RemoteColdConnection] = Map.empty
+    peer:              NodeId,
+    peerBlocks:        Option[ListSet[Block]] = None,
+    newKnowNodes: Seq[RemoteConnection] = Seq.empty //source of known nodes, new nodes
   )
 
   case class UpdateSummary(
-    newBlocks:      Option[ListSet[Block]] = None,
-    xDelta:         Int = 0,
-    yDelta:         Int = 0,
-    forgedBlock: Option[(SlotId, Block)] = None,
-    newBlocksSuffix: ListSet[Block] = ListSet.empty,
+    newBlocks:           Option[ListSet[Block]] = None,
+    xDelta:              Int = 0,
+    yDelta:              Int = 0,
+    forgedBlock:         Option[(SlotId, Block)] = None,
+    newBlocksSuffix:     ListSet[Block] = ListSet.empty,
     removedBlocksPrefix: ListSet[Block] = ListSet.empty,
-    updatedConnection: Seq[(NodeId, NetworkNode)]
+    updatedConnection:   Seq[(NodeId, NetworkNode)]
   )
 
   sealed abstract class NodeUpdate
@@ -40,12 +37,10 @@ package object simulation {
     object NoOp extends NodeUpdate
   }
 
-
-
-
   implicit val blockOrdering: Ordering[ListSet[Block]] =
-    Ordering.by[ListSet[Block], Long](_.size)
-      .orElseBy(_.lastOption.map(- _.slot))
+    Ordering
+      .by[ListSet[Block], Long](_.size)
+      .orElseBy(_.lastOption.map(-_.slot))
       .orElseBy(_.lastOption.map(_.blockValue.toLong).getOrElse(0L))
 
   def calculateDistance(node1: NetworkNode, node2: NetworkNode): Long = {
@@ -62,6 +57,7 @@ package object simulation {
   }
 
   object DistanceQuality {
+
     def apply(distance: Double, config: Config): DistanceQuality = {
       val distanceInSlot = distance / config.distancePerSlot
 
@@ -75,9 +71,11 @@ package object simulation {
     object Close extends DistanceQuality {
       def toReputation(config: Config): Double = config.reputationDistanceClose
     }
+
     object Normal extends DistanceQuality {
       def toReputation(config: Config): Double = config.reputationDistanceNormal
     }
+
     object Further extends DistanceQuality {
       def toReputation(config: Config): Double = config.reputationDistanceFurther
     }
@@ -88,6 +86,7 @@ package object simulation {
   }
 
   val emptyBlockchain: String = ""
+
   def getLastPseudoBlockId(blocks: ListSet[Block]): String =
     blocks.lastOption.map(lastBlock => s"${blocks.size}:${lastBlock}").getOrElse(emptyBlockchain)
 }

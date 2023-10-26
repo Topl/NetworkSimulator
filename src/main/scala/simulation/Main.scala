@@ -17,11 +17,38 @@ case class Config(
   coldConnectionsMinimum:             Int = 20,
   reputationMaximumNewConnection:     Int = 10,
   reputationForNewConnection:         Double = 1,
-  reputationNewDecoyPercentPerSlot:   Double = 0.1,
-  reputation1BlockReputation:         Double = 1,
-  reputation2BlockReputation:         Double = 0.8,
-  reputation3BlockReputation:         Double = 0.6,
-  reputation4BlockReputation:         Double = 0.4,
+//////
+  expectedSlotsPerBlock: Double = 5,
+
+  minimumWarmConnections: Int = 6,
+  maximumWarmConnections:               Int = 12,
+
+  minimumHotConnections:                Int = 3,
+
+  /**
+   * Block providing novelty reputation if new unknown block is received in current slot.
+   * Shall be always equal one.
+   */
+  blockNoveltyInitialValue: Double = 1,
+
+/**
+ * Reducing block novelty reputation for each already known source, i.e:
+ * blockNoveltyReputation = 1 - knewSourceForThatBlockId * blockNoveltyReputationStep
+ */
+  blockNoveltyReputationStep: Double = 0.2,
+
+
+  minimumPerformanceReputationPeers:    Int = 1,
+
+  minimumBlockProvidingReputationPeers: Int = 2,
+
+  minimumRequiredReputation:            Double = 0.66,
+
+  warmHostsUpdateEveryNBlock:           Double = 4.0,
+
+  remotePeerNoveltyInExpectedBlocks:    Double = 2.0,
+
+  ///
   // reputation for ideal block transmitter shall no go lower than reputation2BlockReputation,
   // thus we shall take into consideration forgingSlotsPerBlock, i.e.
   // reputation1BlockReputation * (1-reputationNewDecoyPercentPerSlot) * forgingSlotsPerBlock > reputation2BlockReputation
@@ -39,17 +66,26 @@ case class Config(
   forgingProbabilityMultiplier:       Double = 1.5,
   forgingSlotsPerBlock:               Double = 6.5 // TODO calculate based on other values?
 ) {
+  /**
+   * Block novelty reputation shall be reducing every slot by X number.
+   * If we have reputation of "blockNoveltyInitialValue" then after "expectedSlotsPerBlock" slots that
+   * reputation shall be equal to "blockNoveltyInitialValue" - "blockNoveltyReputationStep".
+   * Thus we need such X number where:
+   * pow(X, expectedSlotsPerBlock - 1) == "blockNoveltyInitialValue" - blockNoveltyReputationStep,
+   * then:
+   * X = root of (1 - blockNoveltyReputationStep) with index (expectedSlotsPerBlock - 1)
+   */
+  val blockNoveltyDecoy: Double =
+    Math.pow(blockNoveltyInitialValue - blockNoveltyReputationStep, 1 / (expectedSlotsPerBlock - 1))
+
+  ///
+
   val maxDistance: Double = math.sqrt(maxX * maxX + maxY * maxY)
 
-  val reputationNewBecameOldAfter: Double = forgingSlotsPerBlock * 2
+  val warmHostUpdateEveryNSlots: SlotId = Math.round(warmHostsUpdateEveryNBlock * expectedSlotsPerBlock)
 
-  val minimumNewReputationThreshold: Double = {
-    val decoy = Math.pow(1 - reputationNewDecoyPercentPerSlot, reputationNewBecameOldAfter)
-    reputationForNewConnection * decoy
-  }
-
-  val coldConnectionFetchEveryNSlots: Int = Math.round(forgingSlotsPerBlock * 4).toInt
-
+  val remotePeerNoveltyInSlots: Long =
+    Math.ceil(expectedSlotsPerBlock * remotePeerNoveltyInExpectedBlocks).toLong
 }
 
 case class NetworkConfig(
@@ -59,7 +95,7 @@ case class NetworkConfig(
   maximumNodes:                    Int = 500,
   createForgerEveryNSlots:         Int = 20,
   statisticSkipBlocksWithSlotLess: Long = 500,
-  showGraph:                       Boolean = false
+  showGraph:                       Boolean = true
 ) {
   val maxDistanceChanger: Double = config.maxDistance / 5
 
@@ -111,7 +147,7 @@ object Main {
         } else Seq(NodeUpdate.NoOp)
       if (networkConfig.showGraph) view.updateGraph(newNode)
       view.updateStatistic(network, networkConfig)
-      //Thread.sleep(50)
+      Thread.sleep(10)
     }
 
   }

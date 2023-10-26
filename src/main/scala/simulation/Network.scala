@@ -20,7 +20,8 @@ class Network {
       blockIdToMetaInfo
         .filter(_._1.slot > skipSlotsUpTo)
         .filter(_._2.propagation95Delta.isDefined)
-        .map(_._2.propagation95Delta.get.toDouble).toSeq
+        .map(_._2.propagation95Delta.get.toDouble)
+        .toSeq
 
     (propagations.size, propagations.sum / propagations.size)
   }
@@ -30,7 +31,8 @@ class Network {
       blockIdToMetaInfo
         .filter(_._1.slot > skipSlotsUpTo)
         .filter(_._2.propagation75Delta.isDefined)
-        .map(_._2.propagation75Delta.get.toDouble).toSeq
+        .map(_._2.propagation75Delta.get.toDouble)
+        .toSeq
 
     (propagations.size, propagations.sum / propagations.size)
   }
@@ -63,7 +65,7 @@ class Network {
     }
 
   def addColdPeerForNode(forNode: NodeId, knownNodes: Seq[NodeId]): NodeUpdate = {
-    val toAdd = knownNodes.map(id => (id, RemoteColdConnection(nodes(id), 0))).toMap
+    val toAdd = knownNodes.map(id => (id, RemoteConnection(nodes(id), 0, 0, 0))).toMap
 
     val node = nodes(forNode)
     val oldState = node.state.copy()
@@ -80,14 +82,14 @@ class Network {
       .toSeq
 
     forgingBlockStatistic(slotId, changes)
-    //println(blockIdToMetaInfo)
+    // println(blockIdToMetaInfo)
     lastSlotId = slotId
 
     changes
   }
 
   private def forgingBlockStatistic(slotId: SlotId, changes: Seq[NodeUpdate.ChangeNode]): Unit = {
-    //val newForgedBlocks = changes.filter(_.updateSummary.forgedBlock.isDefined).map(_.updateSummary.forgedBlock.get)
+    // val newForgedBlocks = changes.filter(_.updateSummary.forgedBlock.isDefined).map(_.updateSummary.forgedBlock.get)
 
     changes.foreach { update =>
       update.updateSummary.newBlocksSuffix.foreach { b =>
@@ -108,34 +110,46 @@ class Network {
 
     val propagation95Threshold = allNodesSize * 0.95
     val allAccepted95Blocks =
-      allAcceptedBlocks
-        .filter{b =>
-          val meta = blockIdToMetaInfo(b)
-          meta.propagation95Delta.isEmpty && meta.totalCount >= propagation95Threshold}
-        .toSet
+      allAcceptedBlocks.filter { b =>
+        val meta = blockIdToMetaInfo(b)
+        meta.propagation95Delta.isEmpty && meta.totalCount >= propagation95Threshold
+      }.toSet
     allAccepted95Blocks.foreach { b =>
       val old = blockIdToMetaInfo(b)
       val propagation = slotId - b.slot
       blockIdToMetaInfo(b) = old.copy(propagation95Delta = Option(propagation))
-      //println(s"Fully accepted block ${b}, for ${slotId - b.slot} slots")}
+      // println(s"Fully accepted block ${b}, for ${slotId - b.slot} slots")}
     }
 
     val propagation75Threshold = allNodesSize * 0.75
     val allAccepted75Blocks =
-      allAcceptedBlocks
-        .filter { b =>
-          val meta = blockIdToMetaInfo(b)
-          meta.propagation75Delta.isEmpty && meta.totalCount >= propagation75Threshold
-        }
-        .toSet
+      allAcceptedBlocks.filter { b =>
+        val meta = blockIdToMetaInfo(b)
+        meta.propagation75Delta.isEmpty && meta.totalCount >= propagation75Threshold
+      }.toSet
 
     allAccepted75Blocks.foreach { b =>
       val old = blockIdToMetaInfo(b)
       val propagation = slotId - b.slot
       blockIdToMetaInfo(b) = old.copy(propagation75Delta = Option(propagation))
-      //println(s"Fully accepted block ${b}, for ${slotId - b.slot} slots")}
+      // println(s"Fully accepted block ${b}, for ${slotId - b.slot} slots")}
+    }
+  }
+
+  def getBestBlockSourcePercent(config: NetworkConfig): Double = {
+    val blocks = nodes.filter(d => d._2.state.enabled && d._1 != 0).head._2.state.blocks
+    if (blocks.lastOption.map(_.slot).getOrElse(0L) < config.statisticSkipBlocksWithSlotLess) {
+      0.0
+    } else {
+      val actualBlocks = blocks.dropWhile(_.slot < config.statisticSkipBlocksWithSlotLess)
+      val bestSourceSize = actualBlocks.groupBy(_.source).map { case (id, blocks) => blocks.size }.maxOption.getOrElse(0)
+      bestSourceSize.toDouble / actualBlocks.size
     }
   }
 }
 
-case class BlockMetaInfo(totalCount: Int = 0, propagation75Delta: Option[Long] = None, propagation95Delta: Option[Long] = None)
+case class BlockMetaInfo(
+  totalCount:         Int = 0,
+  propagation75Delta: Option[Long] = None,
+  propagation95Delta: Option[Long] = None
+)

@@ -1,8 +1,6 @@
 package simulation
 
-import cats.data.Chain
-
-import scala.collection.immutable.{ListMap, ListSet}
+import scala.collection.immutable.ListSet
 
 case class NetworkNodeState(
   x:               Int,
@@ -10,12 +8,16 @@ case class NetworkNodeState(
   forger:          Boolean,
   enabled:         Boolean = true,
   blocks:          ListSet[Block] = ListSet.empty,
-  hotConnections:  Map[NodeId, RemoteHotNodeConnection] = Map.empty,
-  warmConnections: Map[NodeId, RemoteWarmConnection] = Map.empty,
-  coldConnections: Map[NodeId, RemoteColdConnection] = Map.empty,
+  hotConnections:  Map[NodeId, RemoteConnection] = Map.empty,
+  warmConnections: Map[NodeId, RemoteConnection] = Map.empty,
+  coldConnections: Map[NodeId, RemoteConnection] = Map.empty,
   distanceDelta:   Double = 0,
   lastForgedBlock: Option[(SlotId, Block)] = None
-)
+) {
+  def getConnection(id: NodeId): Option[RemoteConnection] = {
+    hotConnections.get(id).orElse(warmConnections.get(id)).orElse(coldConnections.get(id))
+  }
+}
 
 object NetworkNodeState {
 
@@ -70,27 +72,10 @@ object NetworkNodeState {
   }
 }
 
-case class RemoteHotNodeConnection(
+case class RemoteConnection(
   node:                  NetworkNode,
   blockReputation:       Double,
   performanceReputation: Double,
-  newReputation:         Double
-) {
-
-  val reputation: Double = {
-    val mean = (blockReputation + performanceReputation + newReputation) / 3
-
-    val max = Math.max(Math.max(blockReputation, performanceReputation), newReputation)
-    val weighted = (2 * max + mean) / 3
-
-    val meanWithoutNew = (blockReputation + performanceReputation) / 2
-    meanWithoutNew
-  }
-}
-
-case class RemoteColdConnection(
-  node:       NetworkNode,
-  reputation: Double
-)
-
-case class RemoteWarmConnection(node: NetworkNode, performance: Double)
+  newReputation:         Double,
+  lastClosedTimestamps:  Seq[Long] = Seq.empty
+) {}
