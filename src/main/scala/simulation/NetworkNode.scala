@@ -57,18 +57,21 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
       val distance = calculateDistance(this, remoteNode.node)
       val slotForBlock = slotId + Math.ceil(distance / config.distancePerSlot).toInt
 
-      val neighbours = if (isWarmPeerUpdateSlot(slotId, config)) {
-        val perfRep = remoteNode.performanceReputation
-        val blockRep = remoteNode.blockReputation
+      val neighbours =
+        if (isWarmPeerUpdateSlot(slotId, config)) {
+          val perfRep = calculatePerfReputation(distance, config)
+          val blockRep = remoteNode.blockReputation
 
-        remoteNode.node.state.hotConnections.map { case (_, connection) =>
-          connection.copy(blockReputation = blockRep,
-            performanceReputation = calculatePerfReputation(distance, config),
-            lastClosedTimestamps = Seq.empty)
-        }.toSeq
-      } else {
-        Seq.empty
-      }
+          remoteNode.node.state.hotConnections.map { case (_, connection) =>
+            connection.copy(
+              blockReputation = blockRep,
+              performanceReputation = 0,
+              lastClosedTimestamps = Seq.empty
+            )
+          }.toSeq
+        } else {
+          Seq.empty
+        }
 
       val peerBlocks =
         if (remoteNode.node.state.blocks != state.blocks) Option(remoteNode.node.state.blocks) else None
@@ -82,7 +85,7 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
   private def forgeBlock(slotId: SlotId, config: Config, rnd: Random)(state: NetworkNodeState): NetworkNodeState =
     if (state.forger && couldForgeInSlot(slotId, config, rnd)) {
       val value = rnd.nextPrintableChar()
-      //println(s"$id: forge block in slot $slotId with value $value")
+      // println(s"$id: forge block in slot $slotId with value $value")
       val newBlock = Block(slotId, state.blocks.size + 1, value, id)
       val newChain = state.blocks + newBlock
       val blockId = getLastPseudoBlockId(newChain)
@@ -143,7 +146,7 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
             }
 
         val updatedHotConnections =
-          newBlocks.map { case (id, blockCount) =>
+          newBlocks.groupMapReduce(_._1)(_._2)(Math.min).map { case (id, blockCount) =>
             val updatedRep = knownSourcesToReputation(config, blockCount)
 
             val hotConnection = state.hotConnections(id) // we already filtered no longer exist connections before
@@ -167,15 +170,17 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
       val minimumWarmPeers = config.minimumWarmConnections
       val warmHostsByReputation =
         state.warmConnections
-          .map(d => d._1 -> d._2.performanceReputation)
+          .map(d => d._1 -> d._2.reputation)
           .toList
           .sortBy(_._2)
       val warmHostsSize = warmHostsByReputation.size
 
-      val warmToCold = warmHostsByReputation.take((warmHostsSize - minimumWarmPeers) / 2).map(_._1)
+      val warmToCold: Seq[NodeId] = warmHostsByReputation.take((warmHostsSize - minimumWarmPeers) / 2).map(_._1)
 
       val (newColdDelta, newWarmPeers) = state.warmConnections.partition(d => warmToCold.contains(d._1))
-      val newColdPeers = state.coldConnections ++ newColdDelta
+      val newColdPeers = state.coldConnections ++ newColdDelta.map { case (id, connection) =>
+        id -> connection.copy(lastClosedTimestamps = connection.lastClosedTimestamps :+ slotId)
+      }
 
       state.copy(coldConnections = newColdPeers, warmConnections = newWarmPeers)
 
@@ -185,10 +190,10 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
   }
 
   private def moveColdToWarm(slotId: SlotId, config: Config, rnd: Random)(state: NetworkNodeState): NetworkNodeState = {
-    //@TODO config.minimumWarmConnections -> config.maximumWarmConnections
+    // @TODO config.minimumWarmConnections -> config.maximumWarmConnections
     val lackWarmPeersCount = config.maximumWarmConnections - state.warmConnections.size
 
-    val eligibleCold = state.coldConnections.filter{case (id, connection) =>
+    val eligibleCold = state.coldConnections.filter { case (id, connection) =>
       connection.lastClosedTimestamps.lastOption.forall { closedInSlot =>
         val totalCloses = connection.lastClosedTimestamps.size
         val nonEligibleWindow = totalCloses * totalCloses * config.closeTimeoutFirstDelayInSlots
@@ -210,17 +215,22 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
     val (newWarmDelta, newCold) =
       state.coldConnections.partition(d => toWarm.contains(d._1))
 
-    // put this node to list of known peer for remote peer
+    // put this node to list of known peer for REMOTE peer
     newWarmDelta.foreach { case (nodeId, remoteConnection) =>
       val distance = calculateDistance(this, remoteConnection.node)
       val slotForNewPeer = slotId + Math.ceil(distance / config.distancePerSlot).toInt
-      val perfRep = calculatePerfReputation(calculateDistance(this, remoteConnection.node), config)
-      //TODO
-      val newKnownNode = RemoteConnection(this, blockReputation = 0, performanceReputation = perfRep, newReputation = 0)
+      // TODO
+      val newKnownNode = RemoteConnection(this, blockReputation = 0, performanceReputation = 0, newReputation = 0)
       remoteConnection.node.putUpdateForSlot(slotForNewPeer, UpdateFromPeer(id, newKnowNodes = Seq(newKnownNode)))
     }
 
-    state.copy(coldConnections = newCold, warmConnections = state.warmConnections ++ newWarmDelta)
+    val warmDeltaWithDistance =
+      newWarmDelta.map { case (id, remoteConnection) =>
+        val perfRep = calculatePerfReputation(calculateDistance(this, remoteConnection.node), config)
+        id -> remoteConnection.copy(performanceReputation = perfRep)
+      }
+
+    state.copy(coldConnections = newCold, warmConnections = state.warmConnections ++ warmDeltaWithDistance)
   }
 
   private def moveHotToCold(slotId: SlotId, config: Config, rnd: Random)(state: NetworkNodeState): NetworkNodeState = {
@@ -262,7 +272,13 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
 
     val (newHot, hotDelta) = state.hotConnections.partition(d => allKeptConnections.contains(d._1))
     val deltaWithClose =
-      hotDelta.map{case (id, connection) => id -> connection.copy(lastClosedTimestamps = connection.lastClosedTimestamps :+ slotId)}
+      hotDelta.map { case (id, connection) =>
+        id -> connection.copy(
+          lastClosedTimestamps = connection.lastClosedTimestamps :+ slotId,
+          blockReputation = 0,
+          performanceReputation = 0
+        )
+      }
 
     val newCold = state.coldConnections ++ deltaWithClose
 
@@ -271,7 +287,7 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
 
   private def moveWarmToHot(slotId: SlotId, config: Config, rnd: Random)(state: NetworkNodeState): NetworkNodeState = {
     val lackByConfig = config.minimumHotConnections - state.hotConnections.size
-    val lackByReputation = 0//if (totalReputation(config) < 0.85) 1 else 0
+    val lackByReputation = 0//if (isWarmPeerUpdateSlot(slotId, config)) 1 else 0 // if (totalReputation(config) < 0.85) 1 else 0
 
     val lackHotPeersCount = Math.max(lackByConfig, lackByReputation)
     val random = Random.shuffle(state.warmConnections.keys.take(lackHotPeersCount)).toSet
@@ -317,8 +333,11 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
     NetworkNodeState.getDiff(oldState, state)
   }
 
-  def knownSourcesToReputation(networkConfig: Config, knownSources: Long): Double = {
-    val reputationReducing: Double = (knownSources - 1) * networkConfig.blockNoveltyReputationStep
-    Math.max(networkConfig.blockNoveltyInitialValue - reputationReducing, 0)
-  }
+  def knownSourcesToReputation(networkConfig: Config, knownSources: Long): Double =
+    if (knownSources == 1) {
+      1
+    } else {
+      val reputationReducing: Double = (knownSources - 1) * networkConfig.blockNoveltyReputationStep
+      Math.max(networkConfig.blockNoveltyInitialValue - reputationReducing, 0)
+    }
 }

@@ -44,12 +44,16 @@ package object simulation {
       .orElseBy(_.lastOption.map(_.blockValue.toLong).getOrElse(0L))
 
   def calculateDistance(node1: NetworkNode, node2: NetworkNode): Long = {
-    val x = math.abs(node1.state.x - node2.state.x)
-    val y = math.abs(node1.state.y - node2.state.y)
-
-    val actualDistance = math.sqrt(x * x + y * y)
+    val actualDistance = calculateDistance(node1.state.x, node1.state.y, node2.state.x, node2.state.y)
 
     Math.max(1, Math.round(actualDistance + (node1.state.distanceDelta + node2.state.distanceDelta) / 2))
+  }
+
+  def calculateDistance(x1: Long, y1: Long, x2: Long, y2: Long): Double = {
+    val x = math.abs(x1 - x2)
+    val y = math.abs(y1 - y2)
+
+    math.sqrt(x * x + y * y)
   }
 
   sealed abstract class DistanceQuality {

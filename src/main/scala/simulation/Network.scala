@@ -44,11 +44,10 @@ class Network {
     NodeUpdate.AddNode(nodeId, node, x, y)
   }
 
-  def addRandomNode(config: Config, rnd: Random, forger: Boolean, distanceReducer: Double): NodeUpdate.AddNode = {
-    val newNodeX = Math.abs(rnd.nextInt() % config.maxX)
-    val newNodeY = Math.abs(rnd.nextInt() % config.maxY)
+  def addRandomNode(x: Int, y: Int, rnd: Random, forger: Boolean, distanceReducer: Double): NodeUpdate.AddNode = {
 
-    addNode(newNodeX, newNodeY, forger, distanceReducer)
+
+    addNode(x, y, forger, distanceReducer)
   }
 
   def removeRandomNode(config: Config, rnd: Random): Option[NodeUpdate.RemoveNode] = {

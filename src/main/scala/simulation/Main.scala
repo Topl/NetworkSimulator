@@ -18,12 +18,12 @@ case class Config(
   reputationMaximumNewConnection:     Int = 10,
   reputationForNewConnection:         Double = 1,
 //////
-  expectedSlotsPerBlock: Double = 5,
+  expectedSlotsPerBlock: Double = 8,
 
   minimumWarmConnections: Int = 6,
   maximumWarmConnections:               Int = 12,
 
-  minimumHotConnections:                Int = 3,
+  minimumHotConnections:                Int = 7,
 
   /**
    * Block providing novelty reputation if new unknown block is received in current slot.
@@ -38,13 +38,13 @@ case class Config(
   blockNoveltyReputationStep: Double = 0.2,
 
 
-  minimumPerformanceReputationPeers:    Int = 1,
+  minimumPerformanceReputationPeers:    Int = 2,
 
   minimumBlockProvidingReputationPeers: Int = 2,
 
   minimumRequiredReputation:            Double = 0.66,
 
-  warmHostsUpdateEveryNBlock:           Double = 2.0,
+  warmHostsUpdateEveryNBlock:           Double = 1.0,
 
   remotePeerNoveltyInExpectedBlocks:    Double = 4.0,
 
@@ -53,7 +53,6 @@ case class Config(
   // reputation for ideal block transmitter shall no go lower than reputation2BlockReputation,
   // thus we shall take into consideration forgingSlotsPerBlock, i.e.
   // reputation1BlockReputation * (1-reputationNewDecoyPercentPerSlot) * forgingSlotsPerBlock > reputation2BlockReputation
-  reputationBlockDecoyPercentPerSlot: Double = 0.03,
   distanceInSlotClose:                Int = 1,
   distanceInSlotNormal:               Int = 3,
   distanceInSlotFurther:              Int = 5,
@@ -65,7 +64,6 @@ case class Config(
   forgingInitialPercent:              Int = 5,
   forgingGapWindowInSlots:            Int = 5,
   forgingProbabilityMultiplier:       Double = 1.5,
-  forgingSlotsPerBlock:               Double = 6.5 // TODO calculate based on other values?
 ) {
   /**
    * Block novelty reputation shall be reducing every slot by X number.
@@ -93,7 +91,7 @@ case class NetworkConfig(
   config:                          Config,
   random:                          Random,
   totalSlots:                      Int = 2000,
-  maximumNodes:                    Int = 500,
+  maximumNodes:                    Int = 40,
   createForgerEveryNSlots:         Int = 20,
   statisticSkipBlocksWithSlotLess: Long = 500,
   showGraph:                       Boolean = true
@@ -141,14 +139,18 @@ object Main {
       val newNode =
         if (network.nodes.count(_._2.state.enabled) < networkConfig.maximumNodes) {
           val forger = slotId % networkConfig.createForgerEveryNSlots == 0
+
+          val newNodeX = Math.abs(random.nextInt() % config.maxX)
+          val newNodeY = Math.abs(random.nextInt() % config.maxY)
+          val forgerDistance = calculateDistance(newNodeX, newNodeY, config.maxX / 2, config.maxY / 2)
           val newNode =
-            network.addRandomNode(config, random, forger = forger, networkConfig.distanceDelta)
+            network.addRandomNode(newNodeX, newNodeY, random, forger = forger, if (forger) -forgerDistance else 0)
           val addKnown = network.addColdPeerForNode(newNode.nodeId, Seq(rootNode.nodeId))
           Seq(newNode, addKnown)
         } else Seq(NodeUpdate.NoOp)
       if (networkConfig.showGraph) view.updateGraph(newNode)
       view.updateStatistic(network, networkConfig)
-      Thread.sleep(10)
+      Thread.sleep(50)
     }
 
   }
@@ -171,4 +173,5 @@ object Main {
     graph.addEdge("CD", "C", "D")
     graph.addEdge("DA", "D", "A")
   }
+
 }

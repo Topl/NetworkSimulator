@@ -70,7 +70,7 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
     slotsPerBlockNode.setAttribute("ui.style", defaultUiStyle)
 
     val bestBlockSourceProbabilityNode = graph.addNode(bestBlockSourceProbability)
-    bestBlockSourceProbabilityNode.setAttribute("xy", xShift, config.maxY + 8 * yShift)
+    bestBlockSourceProbabilityNode.setAttribute("xy", xShift - 200, config.maxY + 8 * yShift)
     bestBlockSourceProbabilityNode.setAttribute("ui.style", defaultUiStyle)
   }
 
@@ -127,7 +127,7 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
         f"Block expectation time mean: ${stats.getMean}%.2f, with standard deviation ${stats.getStandardDeviation}%.2f"
       )
 
-    val blockSources = network.getBestBlockSourcePercent(networkConfig).sorted.takeRight(13).map(v => f"$v%.2f").mkString(",")
+    val blockSources = network.getBestBlockSourcePercent(networkConfig).sorted.reverse.map(v => f"$v%.2f").mkString(" ")
     graph
       .getNode(bestBlockSourceProbability)
       .setAttribute(
@@ -195,6 +195,17 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
     remoteNodeId: NodeId,
     remoteNode:   NetworkNode
   ): Unit = {
+
+    def typeToColor(left: NetworkNode, right: NetworkNode): String =
+      if (left.state.hotConnections.contains(right.id) || right.state.hotConnections.contains(left.id)) {
+        "rgb(255, 0, 0)"
+      } else if (left.state.warmConnections.contains(right.id) || right.state.warmConnections.contains(left.id)) {
+        "rgb(255, 255, 0)"
+      } else {
+        "rgb(0, 0, 0)"
+      }
+
+
     def distanceToColor(distanceQuality: DistanceQuality): String =
       distanceQuality match {
         case DistanceQuality.Close       => "rgb(0, 255, 0)"
