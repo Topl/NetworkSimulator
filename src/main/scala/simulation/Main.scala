@@ -60,7 +60,6 @@ case class Config(
   reputationDistanceNormal:           Double = 0.75, // 0.75
   reputationDistanceFurther:          Double = 0.5, // 0.5
   reputationDistanceVeryFurther:      Double = 0.25, // 0.25
-  closeHotConnectionThreshold:        Double = 0.66,
   forgingInitialPercent:              Int = 5,
   forgingGapWindowInSlots:            Int = 5,
   forgingProbabilityMultiplier:       Double = 1.5,
@@ -91,7 +90,7 @@ case class NetworkConfig(
   config:                          Config,
   random:                          Random,
   totalSlots:                      Int = 2000,
-  maximumNodes:                    Int = 40,
+  maximumNodes:                    Int = 500,
   createForgerEveryNSlots:         Int = 20,
   statisticSkipBlocksWithSlotLess: Long = 500,
   showGraph:                       Boolean = true

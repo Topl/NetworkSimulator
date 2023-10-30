@@ -59,13 +59,13 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
 
       val neighbours =
         if (isWarmPeerUpdateSlot(slotId, config)) {
-          val perfRep = calculatePerfReputation(distance, config)
+          val perfRep = 0 //we put it as cold connection thus 0 here
           val blockRep = remoteNode.blockReputation
 
           remoteNode.node.state.hotConnections.map { case (_, connection) =>
             connection.copy(
               blockReputation = blockRep,
-              performanceReputation = 0,
+              performanceReputation = perfRep,
               lastClosedTimestamps = Seq.empty
             )
           }.toSeq
@@ -76,7 +76,9 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
       val peerBlocks =
         if (remoteNode.node.state.blocks != state.blocks) Option(remoteNode.node.state.blocks) else None
 
-      putUpdateForSlot(slotForBlock, UpdateFromPeer(peer = id, peerBlocks = peerBlocks, newKnowNodes = neighbours))
+      if (peerBlocks.isDefined || neighbours.nonEmpty) {
+        putUpdateForSlot(slotForBlock, UpdateFromPeer(peer = id, peerBlocks = peerBlocks, newKnowNodes = neighbours))
+      }
     }
 
   private def isWarmPeerUpdateSlot(slotId: SlotId, config: Config): Boolean =
@@ -287,7 +289,8 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
 
   private def moveWarmToHot(slotId: SlotId, config: Config, rnd: Random)(state: NetworkNodeState): NetworkNodeState = {
     val lackByConfig = config.minimumHotConnections - state.hotConnections.size
-    val lackByReputation = 0//if (isWarmPeerUpdateSlot(slotId, config)) 1 else 0 // if (totalReputation(config) < 0.85) 1 else 0
+    val lackByReputation = 0//if (!state.hotConnections.exists(_._2.newReputation > 0)) 1 else 0
+    //if (isWarmPeerUpdateSlot(slotId, config)) 1 else 0 // if (totalReputation(config) < 0.85) 1 else 0
 
     val lackHotPeersCount = Math.max(lackByConfig, lackByReputation)
     val random = Random.shuffle(state.warmConnections.keys.take(lackHotPeersCount)).toSet

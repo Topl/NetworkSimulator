@@ -31,24 +31,18 @@ object NetworkNodeState {
     val xDelta: Int = newState.x - oldState.x
     val yDelta: Int = newState.y - oldState.y
 
-    val updatedHotPeer = newState.hotConnections.filter { case (nodeId, connection) =>
-      oldState.hotConnections.get(nodeId).contains(connection)
-    }
-    val removedHotPeer = oldState.hotConnections -- newState.hotConnections.keySet
+    val updatedHotPeer = newState.hotConnections// -- oldState.hotConnections.keySet
+    //val removedHotPeer = oldState.hotConnections -- newState.hotConnections.keySet
 
-    val updatedWarmPeer = newState.warmConnections.filter { case (nodeId, connection) =>
-      oldState.warmConnections.get(nodeId).contains(connection)
-    }
+    val updatedWarmPeer = newState.warmConnections -- oldState.warmConnections.keySet
     val removedWarmPeer = oldState.warmConnections -- newState.warmConnections.keySet
 
-    val updatedColdPeer = newState.coldConnections.filter { case (nodeId, connection) =>
-      oldState.coldConnections.get(nodeId).contains(connection)
-    }
+    val updatedColdPeer = newState.coldConnections -- oldState.coldConnections.keySet
     val removedColdPeer = oldState.coldConnections -- newState.coldConnections.keySet
 
     val updates =
       updatedHotPeer.map { case (id, conn) => (id, conn.node) } ++
-      removedHotPeer.map { case (id, conn) => (id, conn.node) } ++
+      //removedHotPeer.map { case (id, conn) => (id, conn.node) } ++
       updatedWarmPeer.map { case (id, conn) => (id, conn.node) } ++
       removedWarmPeer.map { case (id, conn) => (id, conn.node) } ++
       updatedColdPeer.map { case (id, conn) => (id, conn.node) } ++
