@@ -142,7 +142,7 @@ class Network {
     } else {
       val actualBlocks = blocks.dropWhile(_.slot < config.statisticSkipBlocksWithSlotLess)
       val bestSourceSize =
-        actualBlocks.groupBy(_.source).map { case (id, blocks) => blocks.size.toDouble / actualBlocks.size }
+        actualBlocks.groupBy(_.source).map { case (id, blocks) => blocks.size.toDouble / actualBlocks.size.toDouble }
       bestSourceSize.toSeq
     }
   }

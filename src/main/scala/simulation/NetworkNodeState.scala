@@ -17,6 +17,10 @@ case class NetworkNodeState(
   def getConnection(id: NodeId): Option[RemoteConnection] = {
     hotConnections.get(id).orElse(warmConnections.get(id)).orElse(coldConnections.get(id))
   }
+
+  def getNonColdConnection(id: NodeId): Option[RemoteConnection] = {
+    hotConnections.get(id).orElse(warmConnections.get(id))
+  }
 }
 
 object NetworkNodeState {

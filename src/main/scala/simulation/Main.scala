@@ -18,7 +18,7 @@ case class Config(
   reputationMaximumNewConnection:     Int = 10,
   reputationForNewConnection:         Double = 1,
 //////
-  expectedSlotsPerBlock: Double = 8,
+  expectedSlotsPerBlock: Double = 6.5,
 
   minimumWarmConnections: Int = 6,
   maximumWarmConnections:               Int = 12,
@@ -44,11 +44,13 @@ case class Config(
 
   minimumRequiredReputation:            Double = 0.66,
 
-  warmHostsUpdateEveryNBlock:           Double = 1.0,
+  warmHostsUpdateEveryNBlock:           Double = 4.0,
 
   remotePeerNoveltyInExpectedBlocks:    Double = 4.0,
 
   closeTimeoutFirstDelayInSlots: Int = 2,
+
+  warmToCold: Boolean = false,
   ///
   // reputation for ideal block transmitter shall no go lower than reputation2BlockReputation,
   // thus we shall take into consideration forgingSlotsPerBlock, i.e.
@@ -106,7 +108,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
-    val random = new Random(686578)
+    val random = new Random(6325738)
     val config = Config()
     val networkConfig = NetworkConfig(config, random)
 
@@ -143,7 +145,7 @@ object Main {
           val newNodeY = Math.abs(random.nextInt() % config.maxY)
           val forgerDistance = calculateDistance(newNodeX, newNodeY, config.maxX / 2, config.maxY / 2)
           val newNode =
-            network.addRandomNode(newNodeX, newNodeY, random, forger = forger, if (forger) -forgerDistance else 0)
+            network.addRandomNode(newNodeX, newNodeY, random, forger = forger, if (forger) -forgerDistance else 0) //networkConfig.distanceDelta)
           val addKnown = network.addColdPeerForNode(newNode.nodeId, Seq(rootNode.nodeId))
           Seq(newNode, addKnown)
         } else Seq(NodeUpdate.NoOp)

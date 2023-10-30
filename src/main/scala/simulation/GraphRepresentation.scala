@@ -13,6 +13,7 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
   private val blockPropagation95NodeId = "BlockPropagation95"
   private val blockPropagation75NodeId = "BlockPropagation75"
   private val slotsPerBlock = "SlotsPerBlock"
+  private val bestBlockSourceCount = "bestBlockSourceCount"
   private val bestBlockSourceProbability = "BestBlockSourceProbability" //get max percent of blocks from the same source
 
   def initDraw(): Unit = {
@@ -33,7 +34,7 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
     graph.addEdge("CD", "C", "D")
     graph.addEdge("DA", "D", "A")
 
-    val xShift = -600
+    val xShift = -800
     val yShift = -100
     val defaultUiStyle = s"text-alignment: right; text-size: ${nodeTextSize}; fill-color: rgb(255,255,255);"
 
@@ -69,8 +70,12 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
     slotsPerBlockNode.setAttribute("xy", xShift, config.maxY + 7 * yShift)
     slotsPerBlockNode.setAttribute("ui.style", defaultUiStyle)
 
+    val bestBlockSourceCountNode = graph.addNode(bestBlockSourceCount)
+    bestBlockSourceCountNode.setAttribute("xy", xShift, config.maxY + 8 * yShift)
+    bestBlockSourceCountNode.setAttribute("ui.style", defaultUiStyle)
+
     val bestBlockSourceProbabilityNode = graph.addNode(bestBlockSourceProbability)
-    bestBlockSourceProbabilityNode.setAttribute("xy", xShift - 200, config.maxY + 8 * yShift)
+    bestBlockSourceProbabilityNode.setAttribute("xy", xShift - 200, config.maxY + 9 * yShift)
     bestBlockSourceProbabilityNode.setAttribute("ui.style", defaultUiStyle)
   }
 
@@ -127,12 +132,19 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
         f"Block expectation time mean: ${stats.getMean}%.2f, with standard deviation ${stats.getStandardDeviation}%.2f"
       )
 
-    val blockSources = network.getBestBlockSourcePercent(networkConfig).sorted.reverse.map(v => f"$v%.2f").mkString(" ")
+    val blockSources = network.getBestBlockSourcePercent(networkConfig).sorted.reverse
+    graph
+      .getNode(bestBlockSourceCount)
+      .setAttribute(
+        "ui.label",
+        f"Source Count: ${blockSources.size}")
+
+    val blockSourcesString =  blockSources.map(v => f"${v * 100}%.1f").mkString("; ")
     graph
       .getNode(bestBlockSourceProbability)
       .setAttribute(
         "ui.label",
-        f"Source: $blockSources"
+        f"Source: $blockSourcesString"
       )
   }
 
