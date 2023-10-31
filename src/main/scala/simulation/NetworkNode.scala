@@ -62,7 +62,7 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
           val perfRep = 0 //we put it as cold connection thus 0 here
           val blockRep = remoteNode.blockReputation
 
-          (remoteNode.node.state.warmConnections ++ remoteNode.node.state.hotConnections).map { case (_, connection) =>
+          remoteNode.node.state.hotConnections.map { case (_, connection) =>
             connection.copy(
               blockReputation = blockRep,
               performanceReputation = perfRep,
@@ -170,7 +170,7 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
     val maximumWarmConnections = config.maximumWarmConnections
     val warmPeersSize = state.warmConnections.size
 
-    if (isWarmPeerUpdateSlot(slotId, config) && warmPeersSize < maximumWarmConnections) {
+    if (isWarmPeerUpdateSlot(slotId, config) /*&& warmPeersSize < maximumWarmConnections*/) {
 
       val warmToCold: Seq[NodeId] = {
         if (config.warmToCold) {
@@ -212,16 +212,24 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
       }
     }
 
-    val randomPeers = Random.shuffle(eligibleCold.keySet).take(lackWarmPeersCount)
+    val randomPeers: Seq[NodeId] = Random.shuffle(eligibleCold.keySet).take(lackWarmPeersCount).toSeq
 
-    val reputationPeers =
+    val blockReputationPeers =
       eligibleCold.toSeq
         .sortBy { case (nodeId, peer) => peer.blockReputation + peer.performanceReputation}
         .takeRight(lackWarmPeersCount)
         .map(_._1)
-        .toSet
+        .toSeq
 
-    val toWarm = Random.shuffle(randomPeers ++ reputationPeers).take(lackWarmPeersCount)
+    val perfReputationPeers =
+      eligibleCold.toSeq
+        .sortBy { case (nodeId, peer) => peer.blockReputation + peer.performanceReputation }
+        .takeRight(lackWarmPeersCount)
+        .map(_._1)
+        .toSeq
+
+    val toWarm =
+      Random.shuffle(randomPeers ++ blockReputationPeers ++ perfReputationPeers).take(lackWarmPeersCount).toSet
 
     val (newWarmDelta, newCold) =
       state.coldConnections.partition(d => toWarm.contains(d._1))

@@ -18,12 +18,10 @@ case class Config(
   reputationMaximumNewConnection:     Int = 10,
   reputationForNewConnection:         Double = 1,
 //////
-  expectedSlotsPerBlock: Double = 6.5,
-
+  expectedSlotsPerBlock:  Double = 6.5,
   minimumWarmConnections: Int = 6,
-  maximumWarmConnections:               Int = 12,
-
-  minimumHotConnections:                Int = 7,
+  maximumWarmConnections: Int = 12,
+  minimumHotConnections:  Int = 7,
 
   /**
    * Block providing novelty reputation if new unknown block is received in current slot.
@@ -31,41 +29,34 @@ case class Config(
    */
   blockNoveltyInitialValue: Double = 1,
 
-/**
- * Reducing block novelty reputation for each already known source, i.e:
- * blockNoveltyReputation = 1 - knewSourceForThatBlockId * blockNoveltyReputationStep
- */
-  blockNoveltyReputationStep: Double = 0.2,
-
-
+  /**
+   * Reducing block novelty reputation for each already known source, i.e:
+   * blockNoveltyReputation = 1 - knewSourceForThatBlockId * blockNoveltyReputationStep
+   */
+  blockNoveltyReputationStep:           Double = 0.2,
   minimumPerformanceReputationPeers:    Int = 2,
-
   minimumBlockProvidingReputationPeers: Int = 2,
-
   minimumRequiredReputation:            Double = 0.66,
-
   warmHostsUpdateEveryNBlock:           Double = 4.0,
-
   remotePeerNoveltyInExpectedBlocks:    Double = 4.0,
-
-  closeTimeoutFirstDelayInSlots: Int = 2,
-
-  warmToCold: Boolean = false,
+  closeTimeoutFirstDelayInSlots:        Int = 1,
+  warmToCold:                           Boolean = false,
   ///
   // reputation for ideal block transmitter shall no go lower than reputation2BlockReputation,
   // thus we shall take into consideration forgingSlotsPerBlock, i.e.
   // reputation1BlockReputation * (1-reputationNewDecoyPercentPerSlot) * forgingSlotsPerBlock > reputation2BlockReputation
-  distanceInSlotClose:                Int = 1,
-  distanceInSlotNormal:               Int = 3,
-  distanceInSlotFurther:              Int = 5,
-  reputationDistanceClose:            Double = 1.0,
-  reputationDistanceNormal:           Double = 0.75, // 0.75
-  reputationDistanceFurther:          Double = 0.5, // 0.5
-  reputationDistanceVeryFurther:      Double = 0.25, // 0.25
-  forgingInitialPercent:              Int = 5,
-  forgingGapWindowInSlots:            Int = 5,
-  forgingProbabilityMultiplier:       Double = 1.5,
+  distanceInSlotClose:           Int = 1,
+  distanceInSlotNormal:          Int = 3,
+  distanceInSlotFurther:         Int = 5,
+  reputationDistanceClose:       Double = 1.0,
+  reputationDistanceNormal:      Double = 0.75, // 0.75
+  reputationDistanceFurther:     Double = 0.5, // 0.5
+  reputationDistanceVeryFurther: Double = 0.25, // 0.25
+  forgingInitialPercent:         Int = 5,
+  forgingGapWindowInSlots:       Int = 5,
+  forgingProbabilityMultiplier:  Double = 1.5
 ) {
+
   /**
    * Block novelty reputation shall be reducing every slot by X number.
    * If we have reputation of "blockNoveltyInitialValue" then after "expectedSlotsPerBlock" slots that
@@ -91,11 +82,13 @@ case class Config(
 case class NetworkConfig(
   config:                          Config,
   random:                          Random,
-  totalSlots:                      Int = 2000,
+  totalSlots:                      Int = 5000,
   maximumNodes:                    Int = 500,
   createForgerEveryNSlots:         Int = 20,
   statisticSkipBlocksWithSlotLess: Long = 500,
-  showGraph:                       Boolean = true
+  showGraph:                       Boolean = true,
+  equalForgerDistance:             Boolean = true,
+  useNetworkDistance:              Boolean = false
 ) {
   val maxDistanceChanger: Double = config.maxDistance / 5
 
@@ -108,7 +101,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
-    val random = new Random(6325738)
+    val random = new Random(719571298)
     val config = Config()
     val networkConfig = NetworkConfig(config, random)
 
@@ -140,12 +133,20 @@ object Main {
       val newNode =
         if (network.nodes.count(_._2.state.enabled) < networkConfig.maximumNodes) {
           val forger = slotId % networkConfig.createForgerEveryNSlots == 0
-
           val newNodeX = Math.abs(random.nextInt() % config.maxX)
           val newNodeY = Math.abs(random.nextInt() % config.maxY)
-          val forgerDistance = calculateDistance(newNodeX, newNodeY, config.maxX / 2, config.maxY / 2)
+
+          val distance = if (networkConfig.equalForgerDistance && forger) {
+            val forgerDistance = calculateDistance(newNodeX, newNodeY, config.maxX / 2, config.maxY / 2)
+            -forgerDistance
+          } else if (networkConfig.useNetworkDistance) {
+            networkConfig.distanceDelta
+          } else {
+            0.0
+          }
+
           val newNode =
-            network.addRandomNode(newNodeX, newNodeY, random, forger = forger, if (forger) -forgerDistance else 0) //networkConfig.distanceDelta)
+            network.addRandomNode(newNodeX, newNodeY, random, forger = forger, distance)
           val addKnown = network.addColdPeerForNode(newNode.nodeId, Seq(rootNode.nodeId))
           Seq(newNode, addKnown)
         } else Seq(NodeUpdate.NoOp)
