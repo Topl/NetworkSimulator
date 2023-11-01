@@ -82,7 +82,7 @@ case class Config(
 case class NetworkConfig(
   config:                          Config,
   random:                          Random,
-  totalSlots:                      Int = 5000,
+  totalSlots:                      Int = 2000,
   maximumNodes:                    Int = 500,
   createForgerEveryNSlots:         Int = 20,
   statisticSkipBlocksWithSlotLess: Long = 500,
@@ -101,7 +101,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
-    val random = new Random(719571298)
+    val random = new Random(71901298)
     val config = Config()
     val networkConfig = NetworkConfig(config, random)
 

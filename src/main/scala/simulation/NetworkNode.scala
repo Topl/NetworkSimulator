@@ -126,13 +126,20 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
         val bestBlocks = allBlocks.max
 
         // add new connection: no source - by established warm connection; with source - by getting neighbours
-        val newConnections: Seq[(NodeId, RemoteConnection)] =
+        val newColdConnections: Seq[(NodeId, RemoteConnection)] =
           updates
             .flatMap(_.newKnowNodes)
-            .filter(connection => state.getNonColdConnection(connection.node.id).isEmpty) // ignore already existed node
+            .filter(connection => state.getConnection(connection.node.id).isEmpty) // ignore already existed node
             .map(connection => connection.node.id -> connection)
 
-        val allColdConnections = state.coldConnections ++ newConnections
+//        val newWarmConnection: Map[NodeId, RemoteConnection] =
+//          updates.flatMap(_.newKnowNodes)
+//            .filter(conn => state.warmConnections.contains(conn.node.id))
+//            .groupMapReduce(_.node.id)(_.blockReputation)(Math.max)
+//            .map(d => d._1 -> state.warmConnections(d._1).copy(blockReputation = d._2))
+
+        val allColdConnections = state.coldConnections ++ newColdConnections
+//        val allWarmConnection = state.warmConnections ++ newWarmConnection
 
         // update hot connection block reputation
         val updateWithNewBlocks = updates.filter(_.peerBlocks.isDefined).map(u => (u.peer, u.peerBlocks.get))
