@@ -15,6 +15,8 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
   private val slotsPerBlock = "SlotsPerBlock"
   private val bestBlockSourceCount = "bestBlockSourceCount"
   private val bestBlockSourceProbability = "BestBlockSourceProbability" //get max percent of blocks from the same source
+  private val deltaSquare = "DeltaSquare" //get max percent of blocks from the same source
+
 
   def initDraw(): Unit = {
     graph.addNode("A")
@@ -35,7 +37,7 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
     graph.addEdge("DA", "D", "A")
 
     val xShift = -800
-    val yShift = -100
+    val yShift = -75
     val defaultUiStyle = s"text-alignment: right; text-size: ${nodeTextSize}; fill-color: rgb(255,255,255);"
 
     val currentSlotNode = graph.addNode(currentSlotId)
@@ -77,6 +79,10 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
     val bestBlockSourceProbabilityNode = graph.addNode(bestBlockSourceProbability)
     bestBlockSourceProbabilityNode.setAttribute("xy", xShift - 200, config.maxY + 9 * yShift)
     bestBlockSourceProbabilityNode.setAttribute("ui.style", defaultUiStyle)
+
+    val deltaSquareNode = graph.addNode(deltaSquare)
+    deltaSquareNode.setAttribute("xy", xShift, config.maxY + 10 * yShift)
+    deltaSquareNode.setAttribute("ui.style", defaultUiStyle)
   }
 
   def updateStatistic(network: Network, networkConfig: NetworkConfig): Unit = {
@@ -87,7 +93,7 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
 
     graph
       .getNode(totalForgers)
-      .setAttribute("ui.label", s"Total forgers: ${network.nodes.count(n => n._2.state.enabled && n._2.forger)}")
+      .setAttribute("ui.label", s"Total forgers: ${network.forgerCount}")
 
     graph
       .getNode(meanHotConnections)
@@ -132,20 +138,32 @@ class GraphRepresentation(graph: SingleGraph, config: Config) {
         f"Block expectation time mean: ${stats.getMean}%.2f, with standard deviation ${stats.getStandardDeviation}%.2f"
       )
 
-    val blockSources = network.getBestBlockSourcePercent(networkConfig).sorted.reverse
+    val blockSources = network.getBestBlockSourcePercent(networkConfig).sorted.reverse.map(_ * 100)
     graph
       .getNode(bestBlockSourceCount)
       .setAttribute(
         "ui.label",
         f"Source Count: ${blockSources.size}")
 
-    val blockSourcesString =  blockSources.map(v => f"${v * 100}%.1f").mkString("; ")
+    val blockSourcesString =  blockSources.map(v => f"$v%.1f").mkString("; ")
     graph
       .getNode(bestBlockSourceProbability)
       .setAttribute(
         "ui.label",
         f"Source: $blockSourcesString"
       )
+
+    val expectedPercent = 100.0 / network.forgerCount
+    val deltaSquareRes =
+      Seq.fill(network.forgerCount)(expectedPercent)
+      .zipAll(blockSources, 0.0, 0.0)
+      .map{case (expected, actual) => (expected - actual) * (expected - actual)}
+
+    graph
+      .getNode(deltaSquare)
+      .setAttribute(
+        "ui.label",
+        f"Delta square: ${deltaSquareRes.sum}")
   }
 
   def updateGraph(updates: Seq[NodeUpdate]): Unit =

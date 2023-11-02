@@ -86,7 +86,7 @@ case class NetworkConfig(
   maximumNodes:                    Int = 500,
   createForgerEveryNSlots:         Int = 20,
   statisticSkipBlocksWithSlotLess: Long = 500,
-  showGraph:                       Boolean = true,
+  showGraph:                       Boolean = false,
   equalForgerDistance:             Boolean = true,
   useNetworkDistance:              Boolean = false
 ) {

@@ -219,7 +219,7 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
       }
     }
 
-    val randomPeers: Seq[NodeId] = Random.shuffle(eligibleCold.keySet).take(lackWarmPeersCount).toSeq
+    val randomPeers: Seq[NodeId] = rnd.shuffle(eligibleCold.keySet).take(lackWarmPeersCount).toSeq
 
     val blockReputationPeers =
       eligibleCold.toSeq
@@ -236,7 +236,7 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
         .toSeq
 
     val toWarm =
-      Random.shuffle(randomPeers ++ blockReputationPeers ++ perfReputationPeers).take(lackWarmPeersCount).toSet
+      rnd.shuffle(randomPeers ++ blockReputationPeers ++ perfReputationPeers).take(lackWarmPeersCount).toSet
 
     val (newWarmDelta, newCold) =
       state.coldConnections.partition(d => toWarm.contains(d._1))
@@ -314,11 +314,11 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
 
   private def moveWarmToHot(slotId: SlotId, config: Config, rnd: Random)(state: NetworkNodeState): NetworkNodeState = {
     val lackByConfig = config.minimumHotConnections - state.hotConnections.size
-    //val lackByReputation = 0//if (!state.hotConnections.exists(_._2.newReputation > 0)) 1 else 0
-    val lackByReputation = if (isWarmPeerUpdateSlot(slotId, config)) 2 else 0 // if (totalReputation(config) < 0.85) 1 else 0
+    val lackByReputation = if (!state.hotConnections.exists(_._2.newReputation > 0)) 2 else 0
+    //val lackByReputation = if (isWarmPeerUpdateSlot(slotId, config)) 2 else 0 // if (totalReputation(config) < 0.85) 1 else 0
 
     val lackHotPeersCount = Math.max(lackByConfig, lackByReputation)
-    val random = Random.shuffle(state.warmConnections.keys.take(lackHotPeersCount)).toSeq
+    val random = rnd.shuffle(state.warmConnections.keys.take(lackHotPeersCount)).toSeq
 
     val blockReputation = state.warmConnections
       .map { case (id, connection) =>
@@ -340,7 +340,7 @@ class NetworkNode(val id: NodeId, x: Int, y: Int, val forger: Boolean = false, v
       .takeRight(lackHotPeersCount)
       .map(_._1)
 
-    val newHotIds = Random.shuffle(random ++ perfReputation ++ blockReputation).take(lackHotPeersCount).toSet
+    val newHotIds = rnd.shuffle(random ++ perfReputation ++ blockReputation).take(lackHotPeersCount).toSet
 
     val (newHotDelta, newWarm) = state.warmConnections.partition(d => newHotIds.contains(d._1))
     val newHotDeltaWithNewRepUpdate =

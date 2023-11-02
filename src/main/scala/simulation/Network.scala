@@ -14,6 +14,7 @@ class Network {
   val nodes: mutable.Map[NodeId, NetworkNode] = mutable.Map.empty
   private val blockIdToMetaInfo: mutable.Map[Block, BlockMetaInfo] = mutable.Map.empty.withDefaultValue(BlockMetaInfo())
   var lastSlotId: SlotId = 0
+  var forgerCount: Int = 0
 
   def getPropagation95Mean(skipSlotsUpTo: Long): (Long, Double) = {
     val propagations =
@@ -41,6 +42,7 @@ class Network {
     val nodeId = getNextNodeId
     val node = new NetworkNode(nodeId, x, y, forger, distanceReducer)
     nodes.put(nodeId, node)
+    if (forger) forgerCount = forgerCount + 1
     NodeUpdate.AddNode(nodeId, node, x, y)
   }
 
